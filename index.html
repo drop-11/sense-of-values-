@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>わたしの価値観、診断してみる</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+:root{
+  --bg: #241d1a;
+  --surface: #34291f;
+  --surface-2: #40332762;
+  --ink: #f2e9dc;
+  --ink-muted: #b8a99a;
+  --gold: #c9a05c;
+  --gold-soft: #c9a05c55;
+  --sage: #8fa68e;
+  --line: #4a3c30;
+  --radius: 4px;
+}
+
+*{ box-sizing: border-box; }
+
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Noto Sans JP', sans-serif;
+  min-height: 100vh;
+  display:flex;
+  justify-content:center;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; animation: none !important; }
+}
+
+#app{
+  width:100%;
+  max-width: 480px;
+  min-height: 100vh;
+  display:flex;
+  flex-direction:column;
+  padding: 28px 22px 40px;
+  position:relative;
+}
+
+.serif{ font-family:'Shippori Mincho', serif; }
+
+/* ---------- beads progress ---------- */
+.beads{
+  display:flex;
+  gap:9px;
+  justify-content:center;
+  margin-bottom: 34px;
+  flex-wrap:wrap;
+}
+.bead{
+  width:9px; height:9px;
+  border-radius:50%;
+  background: var(--line);
+  transition: background .5s ease, box-shadow .5s ease, transform .4s ease;
+}
+.bead.filled{
+  background: var(--gold);
+  box-shadow: 0 0 8px 1px var(--gold-soft);
+}
+.bead.current{
+  transform: scale(1.35);
+}
+
+/* ---------- screens ---------- */
+.screen{ display:none; flex:1; flex-direction:column; }
+.screen.active{ display:flex; }
+
+/* intro */
+#intro{ justify-content:center; text-align:center; gap:22px; }
+#intro h1{
+  font-size: 27px;
+  line-height:1.6;
+  font-weight:700;
+  margin:0;
+  letter-spacing: .03em;
+}
+#intro p{
+  color: var(--ink-muted);
+  font-size:14.5px;
+  line-height:1.9;
+  margin:0;
+}
+.intro-mark{
+  width:38px; height:38px;
+  margin:0 auto;
+  border:1px solid var(--gold);
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+}
+.intro-mark::after{
+  content:'';
+  width:7px; height:7px;
+  background: var(--gold);
+  border-radius:50%;
+}
+
+/* buttons */
+.btn{
+  background: var(--gold);
+  color: #241d1a;
+  border:none;
+  border-radius: var(--radius);
+  padding: 15px 20px;
+  font-family:'Noto Sans JP', sans-serif;
+  font-weight:700;
+  font-size:15px;
+  letter-spacing:.03em;
+  cursor:pointer;
+  transition: opacity .2s ease, transform .15s ease;
+}
+.btn:hover{ opacity:.88; }
+.btn:active{ transform: scale(.98); }
+.btn:focus-visible{ outline:2px solid var(--sage); outline-offset:3px; }
+.btn.ghost{
+  background:transparent;
+  color: var(--ink-muted);
+  border:1px solid var(--line);
+}
+.btn.ghost:hover{ color:var(--ink); border-color:var(--gold); }
+.btn[disabled]{ opacity:.35; cursor:not-allowed; }
+
+/* question */
+.q-theme{
+  color: var(--sage);
+  font-size:12.5px;
+  letter-spacing:.06em;
+  margin-bottom:10px;
+}
+.q-prompt{
+  font-size:20px;
+  line-height:1.7;
+  font-weight:700;
+  margin: 0 0 26px;
+}
+.options{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-bottom: 28px;
+}
+.option{
+  text-align:left;
+  background: var(--surface);
+  border:1px solid var(--line);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  font-family:'Noto Sans JP', sans-serif;
+  font-size:14.5px;
+  line-height:1.6;
+  cursor:pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+.option:hover{ border-color: var(--gold-soft); }
+.option:focus-visible{ outline:2px solid var(--sage); outline-offset:2px; }
+.option.selected{
+  border-color: var(--gold);
+  background: linear-gradient(0deg, var(--surface) 0%, #3d3123 100%);
+}
+.option .dot{
+  display:inline-block;
+  width:6px; height:6px;
+  border-radius:50%;
+  border:1px solid var(--ink-muted);
+  margin-right:10px;
+  vertical-align:middle;
+}
+.option.selected .dot{
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.followup{
+  opacity:0;
+  max-height:0;
+  overflow:hidden;
+  transition: opacity .35s ease, max-height .35s ease;
+}
+.followup.show{
+  opacity:1;
+  max-height:400px;
+  margin-bottom: 26px;
+}
+.followup-label{
+  font-size:12.5px;
+  color: var(--ink-muted);
+  margin-bottom:10px;
+}
+.intensity{
+  display:flex;
+  gap:8px;
+  margin-bottom:20px;
+}
+.intensity-dot{
+  flex:1;
+  height:34px;
+  border-radius: var(--radius);
+  border:1px solid var(--line);
+  background: var(--surface);
+  cursor:pointer;
+  color: var(--ink-muted);
+  font-size:12px;
+  transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+.intensity-dot.selected{
+  border-color: var(--gold);
+  background: var(--gold-soft);
+  color: var(--ink);
+}
+.reason-input{
+  width:100%;
+  background: var(--surface);
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+  padding:12px 14px;
+  font-family:'Noto Sans JP', sans-serif;
+  font-size:14px;
+  resize:none;
+  min-height:60px;
+}
+.reason-input:focus-visible{ outline:2px solid var(--sage); outline-offset:2px; }
+.reason-input::placeholder{ color:#7a6b5c; }
+
+.nav-row{
+  margin-top:auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+
+/* loading */
+#loading{ justify-content:center; align-items:center; text-align:center; gap:18px; }
+.loader-ring{
+  width:46px; height:46px;
+  border-radius:50%;
+  border: 1.5px solid var(--line);
+  border-top-color: var(--gold);
+  animation: spin 1.1s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg); } }
+#loading p{ color: var(--ink-muted); font-size:13.5px; }
+
+/* result */
+#result{ gap:0; }
+.result-header{ text-align:center; margin-bottom:30px; }
+.result-header .intro-mark{ margin-bottom:16px; }
+.result-header h2{
+  font-size:22px; font-weight:700; margin:0 0 8px; line-height:1.6;
+}
+.result-header p{ color: var(--ink-muted); font-size:13.5px; line-height:1.8; margin:0; }
+
+.value-card{
+  border:1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom:16px;
+  background: var(--surface);
+}
+.value-card h3{
+  font-family:'Shippori Mincho', serif;
+  font-size:19px;
+  margin:0 0 10px;
+  color: var(--gold);
+  font-weight:700;
+}
+.value-card .episode{
+  font-size:13.5px;
+  line-height:1.85;
+  color: var(--ink);
+  margin: 0 0 14px;
+}
+.value-card .feelings{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.pill{
+  font-size:12px;
+  padding:5px 11px;
+  border-radius:20px;
+  border:1px solid var(--line);
+  color: var(--ink-muted);
+}
+.pill.on{ border-color: var(--sage); color: var(--sage); }
+.pill.off{ border-color: #6b4a4a; color: #c98a8a; }
+
+.summary-block{
+  margin-top: 10px;
+  padding: 20px;
+  border:1px solid var(--gold-soft);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg, #3d3123 0%, var(--surface) 100%);
+}
+.summary-block p{
+  font-size:14.5px;
+  line-height:1.95;
+  margin:0;
+}
+
+.result-actions{
+  margin-top:28px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.error-box{
+  border:1px solid #6b4a4a;
+  background:#3a2626;
+  color:#e8c9c9;
+  padding:14px 16px;
+  border-radius: var(--radius);
+  font-size:13px;
+  line-height:1.7;
+  margin-bottom:18px;
+}
+
+.brand-tag{
+  color: var(--gold);
+  font-size:12px;
+  letter-spacing:.05em;
+  margin-top:-6px;
+}
+
+/* ---------- shareable result card (offscreen, captured via html2canvas) ---------- */
+#shareCard{
+  position:absolute;
+  left:-9999px;
+  top:0;
+  width:1080px;
+  height:1350px;
+  background: radial-gradient(120% 90% at 50% 0%, #3d3123 0%, #241d1a 70%);
+  color: var(--ink);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding: 90px 100px;
+  text-align:center;
+}
+.sc-mark{
+  width:64px; height:64px;
+  border:2px solid var(--gold);
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  margin-bottom:36px;
+}
+.sc-mark::after{
+  content:'';
+  width:12px; height:12px;
+  background: var(--gold);
+  border-radius:50%;
+}
+.sc-kicker{
+  font-size:22px;
+  color: var(--gold);
+  letter-spacing:.05em;
+  margin-bottom:18px;
+}
+.sc-title{
+  font-family:'Shippori Mincho', serif;
+  font-weight:700;
+  font-size:44px;
+  margin-bottom:56px;
+  letter-spacing:.04em;
+}
+.sc-values{
+  display:flex;
+  flex-direction:column;
+  gap:26px;
+  margin-bottom:60px;
+  width:100%;
+}
+.sc-value{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  padding: 22px 0;
+}
+.sc-value-name{
+  font-family:'Shippori Mincho', serif;
+  font-size:38px;
+  font-weight:700;
+  color: var(--gold);
+}
+.sc-summary{
+  font-size:26px;
+  line-height:1.9;
+  color: var(--ink);
+  margin-bottom:70px;
+}
+.sc-brand{
+  font-size:22px;
+  color: var(--gold);
+  line-height:1.7;
+  letter-spacing:.03em;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="beads" id="beads"></div>
+
+  <!-- INTRO -->
+  <section id="intro" class="screen active">
+    <div class="intro-mark"></div>
+    <h1 class="serif">わたしの価値観、<br>診断してみる</h1>
+    <div class="brand-tag">by あん（@an_lifework_）</div>
+    <p>いくつかの問いに、選ぶだけで答えていきます。<br>
+    うまく言葉にならないときは、その感覚のままでかまいません。<br>
+    答え終えると、あなたの言葉から<br>大切にしている価値観を紡ぎ出します。</p>
+    <button class="btn" id="startBtn" style="margin-top:10px;">はじめる</button>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="quiz" class="screen">
+    <div class="q-theme" id="qTheme"></div>
+    <div class="q-prompt serif" id="qPrompt"></div>
+    <div class="options" id="qOptions"></div>
+
+    <div class="followup" id="followup">
+      <div class="followup-label">その感覚の強さは？</div>
+      <div class="intensity" id="intensityRow"></div>
+      <div class="followup-label">なぜそれを選んだと思いますか？（一言でも、空欄でもかまいません）</div>
+      <textarea class="reason-input" id="reasonInput" placeholder="思いついた言葉だけで大丈夫です"></textarea>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn ghost" id="backBtn">戻る</button>
+      <button class="btn" id="nextBtn" disabled>次へ</button>
+    </div>
+  </section>
+
+  <!-- LOADING -->
+  <section id="loading" class="screen">
+    <div class="loader-ring"></div>
+    <p id="loadingText">あなたの言葉を読み込んでいます</p>
+  </section>
+
+  <!-- RESULT -->
+  <section id="result" class="screen">
+    <div id="resultInner"></div>
+  </section>
+
+  <div id="shareCard"></div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+const axisMeta = {
+  freedom: {
+    name: "自分のペースで進める自由さ",
+    satisfied: "誰にも急かされず、自分の流れで物事を進められているとき",
+    unsatisfied: "誰かのペースに合わせすぎて、息苦しさを感じているとき"
+  },
+  connection: {
+    name: "心でつながる関係",
+    satisfied: "気を張らずに、本音で誰かと関われているとき",
+    unsatisfied: "表面的なやり取りばかりで、孤独を感じているとき"
+  },
+  authenticity: {
+    name: "素のままでいられること",
+    satisfied: "取り繕わなくても、自分のままで受け止めてもらえているとき",
+    unsatisfied: "本音を隠して、誰かに合わせてしまっているとき"
+  },
+  growth: {
+    name: "新しい発見と成長",
+    satisfied: "昨日より少しでも前に進めている実感があるとき",
+    unsatisfied: "同じことの繰り返しで、変化を感じられないとき"
+  },
+  contribution: {
+    name: "誰かの役に立てている実感",
+    satisfied: "自分がした何かで、誰かの力になれたと感じられるとき",
+    unsatisfied: "頑張りが誰にも気づかれず、届いていないと感じるとき"
+  },
+  security: {
+    name: "認められている安心感",
+    satisfied: "ここにいていいんだと、静かに思えているとき",
+    unsatisfied: "評価や反応が見えず、不安なままでいるとき"
+  }
+};
+
+const typeMeta = {
+  'authenticity+connection': {
+    title: "本音でつながりたい人",
+    desc: "取り繕わない自分のままで、誰かと関わりたい人。表面的な付き合いよりも、少数でも深く通じ合える関係を大切にしています。"
+  },
+  'authenticity+contribution': {
+    title: "ありのままで役に立ちたい人",
+    desc: "無理に自分を作らなくても、素のままで誰かの力になれることに喜びを感じるタイプ。頑張りすぎず、自然体でいられる形での貢献を求めています。"
+  },
+  'authenticity+freedom': {
+    title: "自分の輪郭を大切にする自由人",
+    desc: "誰かに合わせて形を変えるより、自分らしいペースと在り方を保っていたい人。縛られない環境の中でこそ、本来の自分を発揮できます。"
+  },
+  'authenticity+growth': {
+    title: "自分を更新し続ける人",
+    desc: "今の自分に満足しきらず、素の自分を保ちながらも変化を楽しめるタイプ。学びや発見を、自分らしさを深める手段として捉えています。"
+  },
+  'authenticity+security': {
+    title: "揺るがない自分でいたい人",
+    desc: "周りに左右されず、自分の感覚を信じていたい人。安心できる関係や環境があってこそ、素のままの自分を出せるようです。"
+  },
+  'connection+contribution': {
+    title: "誰かのそばで支えになる人",
+    desc: "一人で完結するより、誰かと関わりながら役に立てることに喜びを感じるタイプ。人とのつながりの中に、自分の存在意義を見出しています。"
+  },
+  'connection+freedom': {
+    title: "自由なつながりを紡ぐ人",
+    desc: "干渉されすぎない、けれど孤独でもない関係を求めるタイプ。自分のペースを保ちながら人とつながれる距離感を、大切にしています。"
+  },
+  'connection+growth': {
+    title: "共に育っていく関係を求める人",
+    desc: "一人で頑張るより、誰かと刺激し合いながら前に進みたいタイプ。人との関わりの中で、自分自身の変化や発見を実感しています。"
+  },
+  'connection+security': {
+    title: "安心できる絆を大切にする人",
+    desc: "浅く広くより、信頼できる相手との深い関係を求めるタイプ。見守られている、受け止められているという感覚が、心の土台になっています。"
+  },
+  'contribution+freedom': {
+    title: "自分のペースで誰かを支える人",
+    desc: "誰かの役に立ちたい気持ちはありつつも、自分のリズムを崩したくないタイプ。無理のない形での貢献こそが、長く続けられる原動力です。"
+  },
+  'contribution+growth': {
+    title: "学びを誰かに還元する人",
+    desc: "自分が得た気づきや成長を、誰かのために活かしたいタイプ。学ぶこと自体よりも、それが誰かの役に立った瞬間に、深い充実感を覚えます。"
+  },
+  'contribution+security': {
+    title: "静かに支え、認められたい人",
+    desc: "目立たなくても、誰かの力になれていることに意味を感じるタイプ。その頑張りに気づいてもらえたとき、大きな安心を得られます。"
+  },
+  'freedom+growth': {
+    title: "軽やかに前へ進む冒険者",
+    desc: "同じ場所にとどまるより、新しい発見を求めて動き続けたいタイプ。誰にも縛られない自由な環境が、成長の一番の栄養になっています。"
+  },
+  'freedom+security': {
+    title: "静かな自由を求める人",
+    desc: "誰にも急かされず、自分のペースで過ごせる穏やかな時間を求めるタイプ。自由であることと、安心していられることは、あなたの中では地続きなのかもしれません。"
+  },
+  'growth+security': {
+    title: "安心を土台に挑む人",
+    desc: "何かに挑戦したい気持ちはあっても、足場が不安定だと踏み出しにくいタイプ。信頼できる環境があってこそ、思い切った一歩を踏み出せるようです。"
+  }
+};
+
+const questions = [
+  {
+    theme: "心が動いた瞬間",
+    prompt: "仕事や日常でふと心が満たされた瞬間、一番近い感覚は？",
+    options: [
+      {text:"自分の力を出し切れた", axis:"growth"},
+      {text:"誰かの役に立てた実感があった", axis:"contribution"},
+      {text:"自分のペースで進められた", axis:"freedom"},
+      {text:"誰かと深くつながれた", axis:"connection"},
+      {text:"素の自分のままでいられた", axis:"authenticity"},
+      {text:"言葉にならない感覚がある", axis:null}
+    ]
+  },
+  {
+    theme: "心が動いた瞬間",
+    prompt: "人との関わりの中で、じんわり嬉しかった瞬間に近いのは？",
+    options: [
+      {text:"ありのままを受け止めてもらえた", axis:"authenticity"},
+      {text:"一緒に何かを作り上げられた", axis:"connection"},
+      {text:"静かに見守ってもらえた", axis:"security"},
+      {text:"新しい価値観に出会えた", axis:"growth"},
+      {text:"誰かの力になれた", axis:"contribution"},
+      {text:"言葉にならない感覚がある", axis:null}
+    ]
+  },
+  {
+    theme: "モヤモヤ・違和感",
+    prompt: "仕事の場面で引っかかりを感じるとき、近いのは？",
+    options: [
+      {text:"自分のペースを乱される", axis:"freedom"},
+      {text:"意見を言っても届かない", axis:"authenticity"},
+      {text:"頑張りが見えない扱いをされる", axis:"security"},
+      {text:"意味を感じられない作業が続く", axis:"growth"},
+      {text:"誰かに合わせすぎてしまう", axis:"connection"},
+      {text:"言葉にならない感覚がある", axis:null}
+    ]
+  },
+  {
+    theme: "モヤモヤ・違和感",
+    prompt: "人間関係でモヤモヤするとき、本当はどうあってほしいと感じますか？",
+    options: [
+      {text:"対等に扱ってほしい", axis:"authenticity"},
+      {text:"もっと素直に話してほしい", axis:"connection"},
+      {text:"干渉せず見守ってほしい", axis:"freedom"},
+      {text:"変化や挑戦を応援してほしい", axis:"growth"},
+      {text:"小さな頑張りに気づいてほしい", axis:"contribution"},
+      {text:"言葉にならない感覚がある", axis:null}
+    ]
+  },
+  {
+    theme: "理想の在り方",
+    prompt: "もし何の制約もなかったら、どんな1日を過ごしていたいですか？",
+    options: [
+      {text:"好きなことに没頭している", axis:"authenticity"},
+      {text:"誰かと笑い合っている", axis:"connection"},
+      {text:"静かに一人で過ごしている", axis:"security"},
+      {text:"新しい場所や人に出会っている", axis:"growth"},
+      {text:"自分のペースで手を動かしている", axis:"freedom"},
+      {text:"言葉にならない感覚がある", axis:null}
+    ]
+  },
+  {
+    theme: "理想の在り方",
+    prompt: "「自分らしいな」と感じるのはどんなときですか？",
+    options: [
+      {text:"何にも縛られていないとき", axis:"freedom"},
+      {text:"誰かの役に立てているとき", axis:"contribution"},
+      {text:"自分の感覚を信じられているとき", axis:"authenticity"},
+      {text:"小さな成長を感じられているとき", axis:"growth"},
+      {text:"誰かと自然体でいられるとき", axis:"connection"},
+      {text:"言葉にならない感覚がある", axis:null}
+    ]
+  },
+  {
+    theme: "繰り返されるパターン",
+    prompt: "これまでの人生で、何度も同じように感じてきた気持ちに近いのは？",
+    options: [
+      {text:"もっと自由でいたいという気持ち", axis:"freedom"},
+      {text:"認められたいという気持ち", axis:"contribution"},
+      {text:"誰かとつながっていたいという気持ち", axis:"connection"},
+      {text:"ちゃんとやらなきゃという気持ち", axis:"authenticity"},
+      {text:"置いていかれる不安", axis:"security"},
+      {text:"言葉にならない感覚がある", axis:null}
+    ]
+  },
+  {
+    theme: "繰り返されるパターン",
+    prompt: "その気持ちが繰り返し出てくる場面に、共通していそうなのは？",
+    options: [
+      {text:"誰かと比べてしまうとき", axis:"growth"},
+      {text:"自分で決められないとき", axis:"freedom"},
+      {text:"頑張りが伝わらないとき", axis:"contribution"},
+      {text:"変化を求められるとき", axis:"security"},
+      {text:"一人になったとき", axis:"connection"},
+      {text:"言葉にならない感覚がある", axis:null}
+    ]
+  }
+];
+
+const state = {
+  screen: 'intro',
+  qIndex: 0,
+  answers: [] // {theme, prompt, option, intensity, reason}
+};
+
+const beadsEl = document.getElementById('beads');
+function renderBeads(){
+  beadsEl.innerHTML = '';
+  questions.forEach((_, i) => {
+    const b = document.createElement('div');
+    b.className = 'bead';
+    if(i < state.answers.length) b.classList.add('filled');
+    if(i === state.qIndex && state.screen === 'quiz') b.classList.add('current');
+    beadsEl.appendChild(b);
+  });
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  state.screen = id;
+  renderBeads();
+}
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  state.qIndex = 0;
+  renderQuestion();
+  showScreen('quiz');
+});
+
+let currentSelection = null;
+let currentIntensity = null;
+
+function renderQuestion(){
+  const q = questions[state.qIndex];
+  currentSelection = null;
+  currentIntensity = null;
+
+  document.getElementById('qTheme').textContent = q.theme;
+  document.getElementById('qPrompt').textContent = q.prompt;
+
+  const optWrap = document.getElementById('qOptions');
+  optWrap.innerHTML = '';
+  q.options.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'option';
+    b.innerHTML = '<span class="dot"></span>' + opt.text;
+    b.addEventListener('click', () => selectOption(opt, b));
+    optWrap.appendChild(b);
+  });
+
+  const intensityRow = document.getElementById('intensityRow');
+  intensityRow.innerHTML = '';
+  const labels = ['弱い','','ふつう','','強い'];
+  for(let i=1;i<=5;i++){
+    const d = document.createElement('button');
+    d.className = 'intensity-dot';
+    d.textContent = labels[i-1] || i;
+    d.addEventListener('click', () => selectIntensity(i, d));
+    intensityRow.appendChild(d);
+  }
+
+  document.getElementById('reasonInput').value = '';
+  document.getElementById('followup').classList.remove('show');
+  document.getElementById('nextBtn').disabled = true;
+  document.getElementById('backBtn').style.visibility = state.qIndex === 0 ? 'hidden' : 'visible';
+  document.getElementById('nextBtn').textContent = state.qIndex === questions.length - 1 ? '結果を見る' : '次へ';
+}
+
+function selectOption(opt, btn){
+  currentSelection = opt;
+  document.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('followup').classList.add('show');
+  updateNextEnabled();
+}
+
+function selectIntensity(val, btn){
+  currentIntensity = val;
+  document.querySelectorAll('.intensity-dot').forEach(d => d.classList.remove('selected'));
+  btn.classList.add('selected');
+  updateNextEnabled();
+}
+
+function updateNextEnabled(){
+  document.getElementById('nextBtn').disabled = !(currentSelection && currentIntensity);
+}
+
+document.getElementById('backBtn').addEventListener('click', () => {
+  if(state.qIndex === 0) return;
+  state.qIndex -= 1;
+  state.answers.pop();
+  renderQuestion();
+  // restore prior selection visually if exists
+  const prev = state.answers[state.qIndex];
+  renderBeads();
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  const q = questions[state.qIndex];
+  state.answers.push({
+    theme: q.theme,
+    prompt: q.prompt,
+    option: currentSelection.text,
+    axis: currentSelection.axis,
+    intensity: currentIntensity,
+    reason: document.getElementById('reasonInput').value.trim()
+  });
+
+  if(state.qIndex < questions.length - 1){
+    state.qIndex += 1;
+    renderQuestion();
+    renderBeads();
+  } else {
+    showScreen('loading');
+    const loadingMsgs = ['あなたの言葉を読み込んでいます','選んだ言葉のパターンを辿っています','価値観の輪郭を描いています'];
+    let mi = 0;
+    const loadingText = document.getElementById('loadingText');
+    loadingText.textContent = loadingMsgs[0];
+    const interval = setInterval(() => {
+      mi = (mi + 1) % loadingMsgs.length;
+      loadingText.textContent = loadingMsgs[mi];
+    }, 550);
+    setTimeout(() => {
+      clearInterval(interval);
+      const parsed = computeResult(state.answers);
+      renderResult(parsed);
+    }, 1500);
+  }
+});
+
+function computeResult(answers){
+  const scores = {};
+  let unspokenCount = 0;
+
+  answers.forEach(a => {
+    if(!a.axis){ unspokenCount++; return; }
+    if(!scores[a.axis]) scores[a.axis] = { score: 0, examples: [] };
+    scores[a.axis].score += a.intensity;
+    scores[a.axis].examples.push({ prompt: a.prompt, option: a.option, reason: a.reason, intensity: a.intensity });
+  });
+
+  const ranked = Object.keys(scores).sort((x, y) => scores[y].score - scores[x].score);
+  const chosenAxes = ranked.slice(0, Math.min(4, ranked.length));
+
+  const reasonTemplates = [
+    ({ reason, valueName }) => `「${reason}」という言葉から、${valueName}を大切にする気持ちが伝わってきます。`,
+    ({ option, reason, prompt, valueName }) => `${prompt}で「${option}」を選び、「${reason}」と言葉にしていたあなたには、${valueName}という価値観が見えてきます。`,
+    ({ reason, valueName }) => `「${reason}」——そこには、${valueName}を求める気持ちがにじんでいるようです。`
+  ];
+  const noReasonTemplates = [
+    ({ option, prompt, valueName }) => `${prompt}で「${option}」を選んでいたあなたからは、${valueName}を大切にする気持ちが見えてきます。`,
+    ({ option, valueName }) => `「${option}」という選択には、${valueName}への想いが表れているようです。`,
+    ({ option, prompt, valueName }) => `${prompt}という場面で、迷わず「${option}」を選んでいたのが印象的です。そこには${valueName}を大切にする気持ちがありそうです。`
+  ];
+
+  const values = chosenAxes.map((axisKey, idx) => {
+    const meta = axisMeta[axisKey];
+    const data = scores[axisKey];
+    const withReason = data.examples.filter(e => e.reason);
+    const pool = withReason.length ? withReason : data.examples;
+    const bestExample = pool.sort((x, y) => y.intensity - x.intensity)[0];
+
+    const ctx = {
+      option: bestExample.option,
+      reason: bestExample.reason,
+      prompt: bestExample.prompt,
+      valueName: meta.name
+    };
+    const episode = bestExample.reason
+      ? reasonTemplates[idx % reasonTemplates.length](ctx)
+      : noReasonTemplates[idx % noReasonTemplates.length](ctx);
+
+    return {
+      name: meta.name,
+      episode_summary: episode,
+      satisfied_feeling: meta.satisfied,
+      unsatisfied_feeling: meta.unsatisfied
+    };
+  });
+
+  let typeTitle, typeDescription;
+  if(chosenAxes.length >= 2){
+    const key = [chosenAxes[0], chosenAxes[1]].sort().join('+');
+    const t = typeMeta[key];
+    typeTitle = t.title;
+    typeDescription = t.desc;
+  } else if(chosenAxes.length === 1){
+    typeTitle = `${axisMeta[chosenAxes[0]].name}を大切にする人`;
+    typeDescription = `他の何よりも、${axisMeta[chosenAxes[0]].name}が、今のあなたを支えているようです。`;
+  } else {
+    typeTitle = "感覚を大切にする人";
+    typeDescription = "まだ言葉にならない感覚のほうが多かったようです。それ自体も、大切なあなたの一部です。";
+  }
+
+  let overall_summary = '';
+  if(chosenAxes.length >= 3){
+    const restNames = chosenAxes.slice(2).map(k => axisMeta[k].name);
+    overall_summary = `そのほかにも、${restNames.join('や')}といった感覚も、あなたの中には確かにあるようです。`;
+  }
+  if(unspokenCount >= 3){
+    overall_summary += (overall_summary ? ' ' : '') + `「言葉にならない感覚がある」を選んだ場面も多かったですね。無理に言葉にしなくても、その感覚こそが本音に近いこともあります。`;
+  }
+  if(!overall_summary){
+    overall_summary = "ここに挙げた感覚を、これからの選択の指針にしてみてください。";
+  }
+
+  return { typeTitle, typeDescription, values, overall_summary };
+}
+
+function renderResult(parsed){
+  const wrap = document.getElementById('resultInner');
+  let html = `
+    <div class="result-header">
+      <div class="intro-mark"></div>
+      <div class="q-theme" style="justify-content:center;text-align:center;">診断結果</div>
+      <h2 class="serif">${escapeHtml(parsed.typeTitle || '')}</h2>
+      <p>${escapeHtml(parsed.typeDescription || '')}</p>
+    </div>
+  `;
+
+  (parsed.values || []).forEach(v => {
+    html += `
+      <div class="value-card">
+        <h3>${escapeHtml(v.name || '')}</h3>
+        <p class="episode">${escapeHtml(v.episode_summary || '')}</p>
+        <div class="feelings">
+          <span class="pill on">満たされる: ${escapeHtml(v.satisfied_feeling || '')}</span>
+          <span class="pill off">満たされない: ${escapeHtml(v.unsatisfied_feeling || '')}</span>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `
+    <div class="summary-block">
+      <p>${escapeHtml(parsed.overall_summary || '')}</p>
+    </div>
+    <div class="result-actions">
+      <button class="btn" id="shareBtn">画像を保存してシェアする</button>
+      <button class="btn ghost" id="restartBtn">もう一度診断する</button>
+    </div>
+  `;
+
+  wrap.innerHTML = html;
+  document.getElementById('restartBtn').addEventListener('click', restart);
+  document.getElementById('shareBtn').addEventListener('click', (e) => saveShareImage(parsed, e.target));
+  buildShareCard(parsed);
+  showScreen('result');
+}
+
+function buildShareCard(parsed){
+  const card = document.getElementById('shareCard');
+  const topValues = (parsed.values || []).slice(0, 3);
+  let inner = `
+    <div class="sc-mark"></div>
+    <div class="sc-kicker">わたしの価値観、診断してみた</div>
+    <div class="sc-title">${escapeHtml(parsed.typeTitle || '')}</div>
+    <div class="sc-values">
+  `;
+  topValues.forEach(v => {
+    inner += `<div class="sc-value"><div class="sc-value-name">${escapeHtml(v.name || '')}</div></div>`;
+  });
+  inner += `
+    </div>
+    <div class="sc-summary">${escapeHtml(parsed.typeDescription || '')}</div>
+    <div class="sc-brand">by あん（@an_lifework_）</div>
+  `;
+  card.innerHTML = inner;
+}
+
+async function saveShareImage(parsed, btnEl){
+  const originalText = btnEl.textContent;
+  btnEl.textContent = '画像を作成中…';
+  btnEl.disabled = true;
+  try{
+    const card = document.getElementById('shareCard');
+    const canvas = await html2canvas(card, { backgroundColor: null, scale: 2, useCORS: true });
+    const link = document.createElement('a');
+    link.download = '価値観診断結果.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch(err){
+    alert('画像の保存に失敗しました。お手数ですが画面のスクリーンショットをご利用ください。');
+  } finally {
+    btnEl.textContent = originalText;
+    btnEl.disabled = false;
+  }
+}
+
+function restart(){
+  state.qIndex = 0;
+  state.answers = [];
+  showScreen('intro');
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+renderBeads();
+</script>
+</body>
+</html>
